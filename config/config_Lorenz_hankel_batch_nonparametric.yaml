@@ -1,0 +1,8 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id: '1-7'
+model:
+  name: DMD
+  method: hankel
+  rank: 3
+  delay: 3

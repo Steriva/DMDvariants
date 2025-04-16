@@ -1,0 +1,9 @@
+dataset:
+  name: PDE_KS
+  # pair_id: '1-7'
+  pair_id: [2]
+model:
+  name: DMD
+  method: highorder
+  rank: 0
+  delay: 40

@@ -1,0 +1,10 @@
+dataset:
+  name: PDE_KS
+  # pair_id: '1-7'
+  pair_id: [2]
+model:
+  name: DMD
+  method: bagopt
+  rank: 80
+  num_trials: 0
+  eig_constraints: {'stable'}

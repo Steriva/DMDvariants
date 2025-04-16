@@ -1,0 +1,9 @@
+dataset:
+  name: PDE_KS
+  # pair_id: '1-7'
+  pair_id: [2]
+model:
+  name: DMD
+  method: hankel
+  rank: 300
+  delay: 40
