@@ -1,0 +1,7 @@
+dataset:
+  name: PDE_KS
+  pair_id: [1,2,3,5]
+model:
+  name: DMD
+  rank: 300
+  delay: 40

@@ -1,0 +1,7 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id: [2]
+model:
+  name: HankelDMD
+  rank: 10
+  delay: 10
