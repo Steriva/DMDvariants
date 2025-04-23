@@ -3,6 +3,5 @@ dataset:
   pair_id: '1-7'
 model:
   name: DMD
-  method: highorder
-  rank: 250
-  delay: 40
+  method: classic
+  rank: 100
