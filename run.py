@@ -107,7 +107,13 @@ def main(config_path: str) -> None:
     if config['model']['method'] == 'hankel' or config['model']['method'] == 'highorder':
         batch_id = f"{batch_id}_delay{config['model']['delay']}"
     elif config['model']['method'] == 'bagopt':
-        batch_id = f"{batch_id}_numtrials{config['model']['num_trials']}"
+        if 'delay' in config['model']:
+            batch_id = f"{batch_id}_delay{config['model']['delay']}"
+        
+        if 'num_trials' in config['model']:
+            batch_id = f"{batch_id}_numtrials{config['model']['num_trials']}"
+        else:
+            batch_id = f"{batch_id}_numtrials0"
 
     # Define the name of the output folder for your batch
     batch_id = f"{batch_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -149,8 +155,8 @@ def main(config_path: str) -> None:
             dmd_model = HankelDMD(config, pair_id, train_data)
         elif config['model']['method'] == 'highorder':
             dmd_model = HighOrderDMD(config, pair_id, train_data)
-        # elif config['model']['method'] == 'bagopt':
-        #     dmd_model = BaggingOptimisedDMD(config, pair_id, train_data)
+        elif config['model']['method'] == 'bagopt':
+            dmd_model = BaggingOptimisedDMD(config, pair_id, train_data)
         else:
             raise ValueError(f"Unknown model method: {config['model']['method']}")
         

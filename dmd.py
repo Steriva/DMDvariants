@@ -151,78 +151,52 @@ class HighOrderDMD(DMD4CTF):
 
         return pred_data
 
-class BaggingOptimisedDMD:
+class BaggingOptimisedDMD(DMD4CTF):
     """
     
     """
-    def __init__(self, config: Dict, train_data: Optional[np.ndarray] = None):
+    def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray]):
         """
         
         """
-        self.rank = config['model']['rank']
-        self.num_trials = config['model']['num_trials']
-        self.train_data = train_data
-        self.train_time = np.arange(train_data.shape[1])
-        self.eig_constraints = {*config['model']['eig_constraints']} if 'eig_constraints' in config['model'] else None
+        super().__init__(config, pair_id, train_data)
 
         # Train the DMD model
-        # print(f"Training DMD model with rank {self.rank}")
         warnings.filterwarnings("ignore")
-        self.dmd = BOPDMD(svd_rank=self.rank, 
-                          num_trials=self.num_trials,
-                          eig_constraints=self.eig_constraints)
-        
-        self.dmd.fit(train_data, self.train_time)
+        self.rank = config['model']['rank']
+        self.delay = config['model']['delay'] if 'delay' in config['model'] else None
+        self.num_trials = config['model']['num_trials'] if 'num_trials' in config['model'] else 0
+        self.eig_constraints = {*config['model']['eig_constraints']} if 'eig_constraints' in config['model'] else None
 
-    def reconstruct(self, test_data: np.ndarray) -> np.ndarray:
+        train_time = np.arange(self.train_data.shape[1]) * self.dt
+
+        _dmd = BOPDMD(svd_rank=self.rank,
+                            num_trials=self.num_trials,
+                            eig_constraints=self.eig_constraints)
+
+        if self.delay is not None:
+            self.dmd = hankel_preprocessing(_dmd, d=self.delay)
+            delay_t = train_time[:-self.delay+1]
+            self.dmd.fit(self.train_data, t=delay_t)
+        else:
+            self.dmd = _dmd
+            self.dmd.fit(self.train_data, t=train_time)
+
+    def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
-        Generate predictions based on the specified model method.
-
-        Args:
-            test_data (np.ndarray): Test data to determine the shape of predictions.
-
-        Returns:
-            np.ndarray: Predicted data array.
-
-        Raises:
-            ValueError: If the method is unknown or required parameters are missing.
+        
         """
         if self.train_data is None:
             raise ValueError("Training data is required for DMD")
         
-        self.test_time = np.arange(test_data.shape[1])
-            
-        assert test_data.shape[0] == self.train_data.shape[0], "Test data must have the same number of features as training data"
-        assert test_data.shape[1] == self.train_data.shape[1], "Test data must have the same number of time steps as training data"
-
-        pred_data = self.dmd.forecast(self.test_time)
+        pred_data = self.dmd.forecast(prediction_timesteps)
 
         if self.num_trials > 0:
             pred_data = pred_data[0]
+
+        if self.delay is not None:
+            pred_data = pred_data[:self.spatial_dimension]
+
+        assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
 
         return pred_data
-
-    def predict(self, test_data: np.ndarray) -> np.ndarray:
-        """
-        Generate predictions based on the specified model method.
-
-        Args:
-            test_data (np.ndarray): Test data to determine the shape of predictions.
-
-        Returns:
-            np.ndarray: Predicted data array.
-
-        Raises:
-            ValueError: If the method is unknown or required parameters are missing.
-        """
-        if self.train_data is None:
-            raise ValueError("Training data is required for DMD")
-        
-        self.test_time = np.arange(self.train_data.shape[1] + test_data.shape[1])
-
-        pred_data = self.dmd.forecast(self.test_time)
-
-        if self.num_trials > 0:
-            pred_data = pred_data[0]
-
-        return pred_data[:, self.train_data.shape[1]:]
