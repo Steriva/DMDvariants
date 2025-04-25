@@ -1,6 +1,6 @@
 dataset:
   name: PDE_KS
-  pair_id: '1-7'
+  # pair_id: [8,9]
 model:
   name: DMD
   method: bagopt

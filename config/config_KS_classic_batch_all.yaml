@@ -1,0 +1,8 @@
+dataset:
+  name: PDE_KS
+  # pair_id: [8,9]
+model:
+  name: DMD
+  method: classic
+  rank: 60
+  parametric: partitioned # or partitioned

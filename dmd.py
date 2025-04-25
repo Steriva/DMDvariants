@@ -1,6 +1,8 @@
+from math import e
 import numpy as np
 from typing import List, Optional, Dict
-from pydmd import DMD, HODMD, BOPDMD
+from pydmd import DMD, HODMD, BOPDMD, ParametricDMD
+from ezyrb import POD, RBF
 from pydmd.preprocessing import hankel_preprocessing
 import warnings
 from ctf4science.data_module import get_config
@@ -35,6 +37,20 @@ class DMD4CTF:
         self.delay = config['model']['delay'] if 'delay' in config['model'] else None
         self.num_trials = config['model']['num_trials'] if 'num_trials' in config['model'] else 0
         self.eig_constraints = {*config['model']['eig_constraints']} if 'eig_constraints' in config['model'] else None
+        if pair_id == 8:
+            self.parametric = {
+                'mode': config['model']['parametric'] if 'parametric' in config['model'] else 'monolithic',
+                'train_params': np.array([1,2,4]),
+                'test_params': np.array([3])
+            }
+        elif pair_id == 9:
+            self.parametric = {
+                'mode': config['model']['parametric'] if 'parametric' in config['model'] else 'monolithic',
+                'train_params': np.array([1,2,3]),
+                'test_params': np.array([4])
+            }
+        else:
+            self.parametric = None
 
     def _check_svd_residual_energy(self, rank: int):
         """
@@ -63,13 +79,13 @@ class DMD4CTF:
         Set the DMD model based on the method specified in the config.
         """
         if self.method == 'classic':
-            self.dmd = ClassicDMD(svd_rank = self.rank, dt=self.dt)
+            self.dmd = ClassicDMD(svd_rank = self.rank, dt=self.dt, parametric=self.parametric)
         elif self.method == 'hankel':
-            self.dmd = HankelDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt)
+            self.dmd = HankelDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt, parametric=self.parametric)
         elif self.method == 'highorder':
-            self.dmd = HighOrderDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt)
+            self.dmd = HighOrderDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt, parametric=self.parametric)
         elif self.method == 'bagopt':
-            self.dmd = BaggingOptimisedDMD(svd_rank= self.rank, delay=self.delay, num_trials=self.num_trials, eig_constraints=self.eig_constraints, dt = self.dt)
+            self.dmd = BaggingOptimisedDMD(svd_rank= self.rank, delay=self.delay, num_trials=self.num_trials, eig_constraints=self.eig_constraints, dt = self.dt, parametric=self.parametric)
         else:
             raise ValueError("Invalid DMD method specified in the config: {}".format(self.method))
 
@@ -86,45 +102,62 @@ class DMD4CTF:
         return self.dmd.predict(prediction_timesteps)
 
 class ClassicDMD():
-    def __init__(self, svd_rank: int, dt: float):
+    def __init__(self, svd_rank: int, dt: float, parametric: Optional[dict] = None):
         """
         Initialize the DMD model.
         """
         self.dt = dt
+        self.parametric = parametric
 
-        self.dmd = DMD(svd_rank=svd_rank)
+        if parametric is None:
+            self.dmd = DMD(svd_rank=svd_rank)
+        else:
+            if parametric['mode'] == 'monolithic':
+                self._dmd = DMD(svd_rank=-1)
+            elif parametric['mode'] == 'partitioned':
+                self._dmd = [DMD(svd_rank=-1) for _ in range(len(parametric['train_params']))]
+
+            self.pod = POD(rank = svd_rank, method='randomized_svd')
+            self.interpolator = RBF()
+
+            self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
     def train(self, train_data: np.ndarray):
         """
         Train the DMD model.
         """
 
-        if train_data.shape[0] > 1:
-            self.dmd = None
-            print("DMD model not trained. Multiple Trajectories not supported")
+        warnings.filterwarnings("ignore")
+        self.spatial_dimension = train_data.shape[1]
+
+        if self.parametric is not None:
+            assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
+            self.dmd.fit(train_data, self.parametric['train_params'])
         else:
-            warnings.filterwarnings("ignore")
-            self.spatial_dimension = train_data.shape[1]
 
             self.dmd.fit(train_data[0])
-            
-            self.dmd.original_time['t0'] = 0
-            self.dmd.original_time['dt'] = self.dt
-            self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        
+        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['dt'] = self.dt
+        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
         
         """
-        if self.dmd is None:
-            raise ValueError("DMD model is not trained")
         
         # Set the DMD time for prediction
         self.dmd.dmd_time['t0'] = prediction_timesteps[0]
         self.dmd.dmd_time['dt'] = self.dt
         self.dmd.dmd_time['tend'] = prediction_timesteps[-1]
 
+        if self.parametric is not None:
+            self.dmd.parameters = self.parametric['test_params']
+        
         pred_data = self.dmd.reconstructed_data
+
+        if self.parametric is not None: # assuming only one test parameter
+            pred_data = pred_data[0]
 
         assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
 
@@ -137,46 +170,65 @@ class HankelDMD():
     """
     Initializes the DMD model with Hankel preprocessing.
     """
-    def __init__(self, svd_rank: int, delay: int, dt: float):
+    def __init__(self, svd_rank: int, delay: int, dt: float, parametric: Optional[dict] = None):
         """
         
         """
         self.dt = dt
-
-        self.dmd = hankel_preprocessing(DMD(svd_rank=svd_rank), d=delay)
+        self.parametric = parametric
         self.delay = delay
+
+        if parametric is None:
+            self.dmd = hankel_preprocessing(DMD(svd_rank=svd_rank), d=delay)
+        else:
+            if parametric['mode'] == 'monolithic':
+                self._dmd = hankel_preprocessing(DMD(svd_rank=-1), d=delay)
+            elif parametric['mode'] == 'partitioned':
+                self._dmd = [hankel_preprocessing(DMD(svd_rank=-1), d=delay) for _ in range(len(parametric['train_params']))]
+
+            self.pod = POD(rank = svd_rank, method='randomized_svd')
+            self.interpolator = RBF()
+
+            self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
     def train(self, train_data: np.ndarray):
         """
         Train the DMD model.
         """
 
-        if train_data.shape[0] > 1:
-            self.dmd = None
-            print("DMD model not trained. Multiple Trajectories not supported")
+        warnings.filterwarnings("ignore")
+        self.spatial_dimension = train_data.shape[1]
+
+        if self.parametric is not None:
+            assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
+            self.dmd.fit(train_data, self.parametric['train_params'])
         else:
-            warnings.filterwarnings("ignore")
-            self.spatial_dimension = train_data.shape[1]
 
             self.dmd.fit(train_data[0])
             
-            self.dmd.original_time['t0'] = 0
-            self.dmd.original_time['dt'] = self.dt
-            self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['dt'] = self.dt
+        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
 
         """
-        if self.dmd is None:
-            raise ValueError("DMD model is not trained")
         
         # Set the DMD time for prediction
         self.dmd.dmd_time['t0'] = prediction_timesteps[0]
         self.dmd.dmd_time['dt'] = self.dt
         self.dmd.dmd_time['tend'] = prediction_timesteps[-1]
 
-        pred_data = self.dmd.reconstructed_data[:, :-self.delay+1]
+        if self.parametric is not None:
+            self.dmd.parameters = self.parametric['test_params']
+
+        pred_data = self.dmd.reconstructed_data
+        
+        if self.parametric is not None: # assuming only one test parameter
+            pred_data = pred_data[0]
+
+        pred_data = pred_data[:, :-self.delay+1]
 
         assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
         
@@ -189,44 +241,60 @@ class HighOrderDMD():
     """
     
     """
-    def __init__(self, svd_rank: int, delay: int, dt: float):
+    def __init__(self, svd_rank: int, delay: int, dt: float, parametric: Optional[dict] = None):
         """
         
         """
         self.dt = dt
-        
-        self.dmd = HODMD(svd_rank=svd_rank, d=delay)
+        self.parametric = parametric
+
+        if parametric is None:    
+           self.dmd = HODMD(svd_rank=svd_rank, d=delay)
+        else:
+            if parametric['mode'] == 'monolithic':
+                self._dmd = HODMD(svd_rank=-1, d=delay)
+            elif parametric['mode'] == 'partitioned':
+                self._dmd = [HODMD(svd_rank=-1, d=delay) for _ in range(len(parametric['train_params']))]
+
+            self.pod = POD(rank = svd_rank, method='randomized_svd')
+            self.interpolator = RBF()
+
+            self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
     def train(self, train_data: np.ndarray):
         """
         Train the DMD model.
         """
 
-        if train_data.shape[0] > 1:
-            self.dmd = None
-            print("DMD model not trained. Multiple Trajectories not supported")
-        else:
-            self.spatial_dimension = train_data.shape[1]
+        warnings.filterwarnings("ignore")
+        self.spatial_dimension = train_data.shape[1]
 
-            warnings.filterwarnings("ignore")
+        if self.parametric is not None:
+            assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
+            self.dmd.fit(train_data, self.parametric['train_params'])
+        else:
             self.dmd.fit(train_data[0])
             
-            self.dmd.original_time['t0'] = 0
-            self.dmd.original_time['dt'] = self.dt
-            self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['dt'] = self.dt
+        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
         
         """
-        if self.dmd is None:
-            raise ValueError("DMD model is not trained")
-        
+        # Set the DMD time for prediction
         self.dmd.dmd_time['t0'] = prediction_timesteps[0]
         self.dmd.dmd_time['dt'] = self.dt
         self.dmd.dmd_time['tend'] = prediction_timesteps[-1]+1e-12
         
+        if self.parametric is not None:
+            self.dmd.parameters = self.parametric['test_params']
+        
         pred_data = self.dmd.reconstructed_data
+
+        if self.parametric is not None: # assuming only one test parameter
+            pred_data = pred_data[0]
 
         assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
         
@@ -239,22 +307,29 @@ class BaggingOptimisedDMD():
     """
     
     """
-    def __init__(self, svd_rank: int, dt: float, delay: Optional[int] = None, num_trials: Optional[int] = 0, eig_constraints: Optional[set] = None):
+    def __init__(self, svd_rank: int, dt: float, 
+                 delay: Optional[int] = None, num_trials: Optional[int] = 0, eig_constraints: Optional[set] = None,
+                 parametric: Optional[dict] = None):
         """
         
         """
 
         self.dt = dt
-        _dmd = BOPDMD(svd_rank=svd_rank, 
-                      num_trials=num_trials, 
-                      eig_constraints=eig_constraints)
+        self.parametric = parametric
 
-        if delay is not None:
-            self.dmd = hankel_preprocessing(_dmd, d=delay)
-            self.delay = delay
+        if parametric is None:
+            _dmd = BOPDMD(svd_rank=svd_rank, 
+                        num_trials=num_trials, 
+                        eig_constraints=eig_constraints)
+
+            if delay is not None:
+                self.dmd = hankel_preprocessing(_dmd, d=delay)
+                self.delay = delay
+            else:
+                self.dmd = _dmd
+                self.delay = None
         else:
-            self.dmd = _dmd
-            self.delay = None
+            self.dmd = None # pydmd does not support parametric DMD with bagging optimised
 
         self.num_trials = num_trials
         self.eig_constraints = eig_constraints
@@ -263,13 +338,14 @@ class BaggingOptimisedDMD():
         """
         Train the DMD model.
         """
-        if train_data.shape[0] > 1:
-            self.dmd = None
-            print("DMD model not trained. Multiple Trajectories not supported")
+
+        warnings.filterwarnings("ignore")
+        self.spatial_dimension = train_data.shape[1]
+
+        if self.parametric is not None:
+            print("Warning: BOPDMD model not trained. Multiple Trajectories not supported")
         else:
 
-            warnings.filterwarnings("ignore")
-            self.spatial_dimension = train_data.shape[1]
             train_time = np.arange(train_data.shape[2]) * self.dt
 
             if self.delay is not None:
@@ -282,16 +358,17 @@ class BaggingOptimisedDMD():
         
         """
         if self.dmd is None:
-            raise ValueError("DMD model is not trained")
-        
-        pred_data = self.dmd.forecast(prediction_timesteps)
+            print("Warning: BOPDMD model not supported for parametric data -> predicting zeros")
+            pred_data = np.zeros((self.spatial_dimension, prediction_timesteps.shape[0]))
+        else:
+            pred_data = self.dmd.forecast(prediction_timesteps)
 
-        if self.num_trials > 0:
-            pred_data = pred_data[0]
+            if self.num_trials > 0:
+                pred_data = pred_data[0]
 
-        if self.delay is not None:
-            pred_data = pred_data[:self.spatial_dimension]
+            if self.delay is not None:
+                pred_data = pred_data[:self.spatial_dimension]
 
-        assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
+            assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
 
         return pred_data

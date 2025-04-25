@@ -1,0 +1,9 @@
+dataset:
+  name: PDE_KS
+  # pair_id: [8,9]
+model:
+  name: DMD
+  method: highorder
+  rank: 100
+  delay: 40
+  parametric: monolithic # monolithic or partitioned

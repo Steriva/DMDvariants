@@ -1,0 +1,9 @@
+dataset:
+  name: ODE_Lorenz
+  # pair_id: [8,9]
+model:
+  name: DMD
+  method: hankel
+  rank: 10
+  delay: 50
+  parametric: monolithic # monolithic or partitioned
