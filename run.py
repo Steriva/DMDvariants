@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from ctf4science.data_module import load_dataset, parse_pair_ids, get_applicable_plots, get_prediction_timesteps
 from ctf4science.eval_module import evaluate, save_results
 from ctf4science.visualization_module import Visualization
-from dmd import HankelDMD, ClassicDMD, HighOrderDMD, BaggingOptimisedDMD
+from models.DMDvariants.dmd import DMD4CTF
 import os
 
 from matplotlib import cm
@@ -104,16 +104,10 @@ def main(config_path: str) -> None:
     # Add rank to batch_id
     batch_id = f"batch_rank{config['model']['rank']}"
 
-    if config['model']['method'] == 'hankel' or config['model']['method'] == 'highorder':
+    if 'delay' in config['model']:
         batch_id = f"{batch_id}_delay{config['model']['delay']}"
-    elif config['model']['method'] == 'bagopt':
-        if 'delay' in config['model']:
-            batch_id = f"{batch_id}_delay{config['model']['delay']}"
-        
-        if 'num_trials' in config['model']:
-            batch_id = f"{batch_id}_numtrials{config['model']['num_trials']}"
-        else:
-            batch_id = f"{batch_id}_numtrials0"
+    if 'num_trials' in config['model']:
+        batch_id = f"{batch_id}_numtrials{config['model']['num_trials']}"
 
     # Define the name of the output folder for your batch
     batch_id = f"{batch_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -149,17 +143,9 @@ def main(config_path: str) -> None:
         # Initialize the model with the config and train_data
         print(f"Running {model_name} on {dataset_name} pair {pair_id}")
 
-        if config['model']['method'] == 'classic': 
-            dmd_model = ClassicDMD(config, pair_id, train_data, delta_t)
-        elif config['model']['method'] == 'hankel': 
-            dmd_model = HankelDMD(config, pair_id, train_data, delta_t)
-        elif config['model']['method'] == 'highorder':
-            dmd_model = HighOrderDMD(config, pair_id, train_data, delta_t)
-        elif config['model']['method'] == 'bagopt':
-            dmd_model = BaggingOptimisedDMD(config, pair_id, train_data, delta_t)
-        else:
-            raise ValueError(f"Unknown model method: {config['model']['method']}")
-        
+        dmd_model = DMD4CTF(config, pair_id, train_data, delta_t)
+        dmd_model.initialize()
+
         # Train the DMD model
         dmd_model.train()
 
@@ -190,7 +176,7 @@ def main(config_path: str) -> None:
             from ctf4science.data_module import _load_test_data
             test_data = _load_test_data(dataset_name, pair_id)
 
-            fig = plot_KS.compare_prediction(test_data, pred_data,
+            fig = plot_KS.compare_prediction(test_data, pred_data.real,
                                             cbar_options={'ticks': 5})
             fig.savefig(results_directory / f"visualizations/contour.png", dpi=200)
             print(f"Saved contour plot to {results_directory / f'visualizations/contour.png'}")

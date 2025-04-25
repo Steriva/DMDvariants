@@ -4,5 +4,5 @@ dataset:
 model:
   name: DMD
   method: highorder
-  rank: 50
+  rank: 100
   delay: 40

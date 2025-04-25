@@ -5,4 +5,4 @@ model:
   name: DMD
   method: hankel
   rank: 10
-  delay: 40
+  delay: 50

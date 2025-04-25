@@ -4,4 +4,4 @@ dataset:
 model:
   name: DMD
   method: classic
-  rank: 10
+  rank: 3
