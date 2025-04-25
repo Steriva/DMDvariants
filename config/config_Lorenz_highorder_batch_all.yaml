@@ -5,5 +5,5 @@ model:
   name: DMD
   method: highorder
   rank: 10
-  delay: 50
+  delay: 40
   parametric: monolithic # monolithic or partitioned

@@ -9,5 +9,5 @@ model:
   # eig_constraints: 
   #   - 'conjugate_pairs'
   #   - 'stable'
-  delay: 50
+  delay: 40
   parametric: monolithic # monolithic or partitioned

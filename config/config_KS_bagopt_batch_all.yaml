@@ -4,8 +4,8 @@ dataset:
 model:
   name: DMD
   method: bagopt
-  rank: 60
+  rank: 50
   num_trials: 0
   eig_constraints: 
     - 'stable'
-  delay: 20
+  delay: 40

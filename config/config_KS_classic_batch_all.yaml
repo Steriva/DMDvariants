@@ -4,5 +4,5 @@ dataset:
 model:
   name: DMD
   method: classic
-  rank: 60
-  parametric: partitioned # or partitioned
+  rank: 100
+  parametric: monolithic # or partitioned
