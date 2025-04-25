@@ -1,8 +1,8 @@
 dataset:
-  name: PDE_KS
+  name: ODE_Lorenz
   pair_id: '1-7'
 model:
   name: DMD
   method: highorder
-  rank: 50
+  rank: 10
   delay: 40

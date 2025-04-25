@@ -4,5 +4,5 @@ dataset:
 model:
   name: DMD
   method: hankel
-  rank: 250
+  rank: 50
   delay: 40

@@ -4,7 +4,10 @@ This directory ...
 
 ## Methods
 
+- **Classic DMD**
 - **Hankel Preprocessing**
+- **High Order DMD**
+- **Bagging Optimised DMD**
 
 ## Usage (check?)
 
@@ -34,10 +37,9 @@ Each file specifies the dataset, pair ID, and baseline method, plus method-speci
 ## Requirements
 
 The baselines rely on packages already in the main `requirements.txt`:
-- numpy
-- scipy
 - pyyaml
 - pydmd
+- ezyrb
 
 No additional dependencies are required (see `requirements.txt`).
 

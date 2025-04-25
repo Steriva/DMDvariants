@@ -144,22 +144,25 @@ def main(config_path: str) -> None:
 
         # Load metadata (to provide forecast length)
         prediction_timesteps = get_prediction_timesteps(dataset_name, pair_id)
-
-        # Train model
-        print(f"Running {model_name} on {dataset_name} pair {pair_id}")
+        delta_t = prediction_timesteps[1] - prediction_timesteps[0]
 
         # Initialize the model with the config and train_data
+        print(f"Running {model_name} on {dataset_name} pair {pair_id}")
+
         if config['model']['method'] == 'classic': 
-            dmd_model = ClassicDMD(config, pair_id, train_data)
+            dmd_model = ClassicDMD(config, pair_id, train_data, delta_t)
         elif config['model']['method'] == 'hankel': 
-            dmd_model = HankelDMD(config, pair_id, train_data)
+            dmd_model = HankelDMD(config, pair_id, train_data, delta_t)
         elif config['model']['method'] == 'highorder':
-            dmd_model = HighOrderDMD(config, pair_id, train_data)
+            dmd_model = HighOrderDMD(config, pair_id, train_data, delta_t)
         elif config['model']['method'] == 'bagopt':
-            dmd_model = BaggingOptimisedDMD(config, pair_id, train_data)
+            dmd_model = BaggingOptimisedDMD(config, pair_id, train_data, delta_t)
         else:
             raise ValueError(f"Unknown model method: {config['model']['method']}")
         
+        # Train the DMD model
+        dmd_model.train()
+
         # Generate predictions
         pred_data = dmd_model.predict(prediction_timesteps)
     

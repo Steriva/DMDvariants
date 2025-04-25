@@ -3,6 +3,5 @@ dataset:
   pair_id: '1-7'
 model:
   name: DMD
-  method: hankel
+  method: classic
   rank: 10
-  delay: 40
