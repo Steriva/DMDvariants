@@ -1,0 +1,7 @@
+# conda create -n ctf-dmd
+# conda activate ctf-dmd
+# conda install Python
+numpy
+pyyaml
+pydmd
+ezyrb
