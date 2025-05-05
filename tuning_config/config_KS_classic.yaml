@@ -1,0 +1,27 @@
+dataset:
+  name: PDE_KS
+  pair_id: 
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  # - 8
+  # - 9
+model:
+  name: DMD
+  train_split: 0.75   # float in (0.7 and 1.0)
+                     # proportion of train data to use for training
+  seed: 0
+  n_trials: 3
+  method: classic
+hyperparameters: # Specify hyperparameters and ranges
+  rank:
+    type: randint
+    lower_bound: 50
+    upper_bound: 250
+  parametric:
+    type: choice
+    choices: [monolithic, partitioned]
