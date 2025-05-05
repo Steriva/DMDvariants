@@ -15,6 +15,7 @@ class DMD4CTF:
     def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray], dt: float, check_svd: Optional[bool] = True):
 
         self.train_data = np.array(train_data) # Shape (num_samples, num_spatial_features, num_timesteps)
+
         self.method = config['model']['method']
         self.dt = dt
 
@@ -23,8 +24,8 @@ class DMD4CTF:
         dataset_metadata = _config_dataset['metadata']
 
         self.spatial_dimension = dataset_metadata['spatial_dimension']
-        assert self.train_data.shape[1] == self.spatial_dimension, "Training data must have the same number of spatial features as dataset metadata"
-
+        assert self.train_data.shape[1] == self.spatial_dimension, "Training data has shape {} but expected shape is {}".format(self.train_data.shape[1], self.spatial_dimension)
+        
         self.pair_id = pair_id
         self.matrix_start_index = dataset_metadata['matrix_start_index'][f'X{pair_id}test.mat']
         self.test_shape = dataset_metadata['matrix_shapes'][f'X{pair_id}test.mat']

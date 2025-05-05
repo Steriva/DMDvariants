@@ -98,7 +98,7 @@ def main(config_path: str) -> None:
     dataset_name = config['dataset']['name']
     pair_ids = parse_pair_ids(config['dataset'])
 
-    # Add rank to model name
+    # Model name
     model_name = f"{config['model']['method']}{config['model']['name']}"
     
     # Add rank to batch_id
