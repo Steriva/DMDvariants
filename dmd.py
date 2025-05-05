@@ -348,7 +348,7 @@ class BaggingOptimisedDMD():
                 svd_rank=-1,
                 num_trials=num_trials,
                 eig_constraints=eig_constraints,
-                varpro_opts_dict={'verbose': False}
+                varpro_opts_dict={'verbose': True}
             )
 
             if parametric['mode'] == 'monolithic':

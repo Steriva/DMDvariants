@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 from typing import List, Dict, Any
 import numpy as np
-from ctf4science.data_module import load_validation_dataset, get_validation_prediction_timesteps, parse_pair_ids, get_training_timesteps
+from ctf4science.data_module import load_validation_dataset, get_validation_prediction_timesteps, parse_pair_ids, get_validation_training_timesteps
 from ctf4science.eval_module import evaluate_custom
 from models.DMDvariants.dmd import DMD4CTF
 
@@ -55,7 +55,7 @@ def main(config_path: str) -> None:
         train_split = config['model']['train_split']
         train_data, val_data, init_data = load_validation_dataset(dataset_name, pair_id, train_split)
         prediction_timesteps = get_validation_prediction_timesteps(dataset_name, pair_id, train_split)
-        train_timesteps = get_training_timesteps(dataset_name, pair_id)[0] # extract first element
+        train_timesteps = get_validation_training_timesteps(dataset_name, pair_id, train_split)[0]
 
         # Load initialization matrix if it exists
         if init_data is None:
@@ -66,7 +66,6 @@ def main(config_path: str) -> None:
             train_data = init_data
 
         # Initialize the model with the config and train_data
-        print(train_data.shape)
         train_data = [train_data] # DMD4CTF expects a list of matrices
         
         dmd_model = DMD4CTF(config, pair_id, train_data, train_timesteps, check_svd=False)

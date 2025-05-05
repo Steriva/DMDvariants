@@ -1,12 +1,21 @@
 dataset:
   name: PDE_KS
-  pair_id: [8,9]
+  pair_id:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
 model:
-  name: DMD
+  delay: 10
+  eig_constraints:
+  - stable
   method: bagopt
-  rank: 60
-  num_trials: 0
-  eig_constraints: 
-    - 'stable'
-  # delay: 0
+  name: DMD
+  rank: 11
+  seed: 0
   parametric: monolithic

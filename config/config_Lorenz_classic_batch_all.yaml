@@ -1,8 +1,17 @@
 dataset:
   name: ODE_Lorenz
-  # pair_id: [8,9]
+  pair_id:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
 model:
-  name: DMD
   method: classic
-  rank: 3
-  parametric: monolithic # monolithic or partitioned
+  name: DMD
+  rank: 9
+  seed: 0

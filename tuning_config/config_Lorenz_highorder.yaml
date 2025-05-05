@@ -1,5 +1,5 @@
 dataset:
-  name: PDE_KS
+  name: ODE_Lorenz
   pair_id:
   - 1
   - 2
@@ -11,7 +11,7 @@ dataset:
   # - 8
   # - 9
 model:
-  name: DMD
+  name: DMD_highorder
   train_split: 0.75   # float in (0.7 and 1.0)
                      # proportion of train data to use for training
   seed: 0
@@ -27,4 +27,4 @@ hyperparameters: # Specify hyperparameters and ranges
     choices: [monolithic, partitioned]
   delay:
     type: choice
-    choices: [10, 20, 30, 40]
+    choices: [10, 20, 30]
