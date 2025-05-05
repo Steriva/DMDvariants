@@ -1,4 +1,3 @@
-from math import e
 import numpy as np
 from typing import List, Optional, Dict
 from pydmd import DMD, HODMD, BOPDMD, ParametricDMD
@@ -12,12 +11,13 @@ class DMD4CTF:
     TO WRITE
     """
 
-    def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray], dt: float, check_svd: Optional[bool] = True):
+    def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray], train_time: np.ndarray, check_svd: Optional[bool] = True):
 
         self.train_data = np.array(train_data) # Shape (num_samples, num_spatial_features, num_timesteps)
 
         self.method = config['model']['method']
-        self.dt = dt
+        self.train_time = train_time
+        self.dt = train_time[1] - train_time[0] # Assuming uniform time steps
 
         # Load dataset metadata
         _config_dataset = get_config(config['dataset']['name'])
@@ -38,17 +38,19 @@ class DMD4CTF:
         self.delay = config['model']['delay'] if 'delay' in config['model'] else None
         self.num_trials = config['model']['num_trials'] if 'num_trials' in config['model'] else 0
         self.eig_constraints = {*config['model']['eig_constraints']} if 'eig_constraints' in config['model'] else None
+
+        # Set the parametric options based on the pair_id and size of the training data
         if pair_id == 8:
             self.parametric = {
                 'mode': config['model']['parametric'] if 'parametric' in config['model'] else 'monolithic',
-                'train_params': np.array([1,2,4]),
-                'test_params': np.array([3])
+                'train_params': np.array([1,2,4]) if len(self.train_data) > 2 else np.array([1,4]),
+                'test_params': np.array([3]) if len(self.train_data) > 2 else np.array([2])
             }
         elif pair_id == 9:
             self.parametric = {
                 'mode': config['model']['parametric'] if 'parametric' in config['model'] else 'monolithic',
-                'train_params': np.array([1,2,3]),
-                'test_params': np.array([4])
+                'train_params': np.array([1,2,3]) if len(self.train_data) > 2 else np.array([1,2]),
+                'test_params': np.array([4]) if len(self.train_data) > 2 else np.array([3])
             }
         else:
             self.parametric = None
@@ -80,13 +82,13 @@ class DMD4CTF:
         Set the DMD model based on the method specified in the config.
         """
         if self.method == 'classic':
-            self.dmd = ClassicDMD(svd_rank = self.rank, dt=self.dt, parametric=self.parametric)
+            self.dmd = ClassicDMD(svd_rank = self.rank, parametric=self.parametric)
         elif self.method == 'hankel':
-            self.dmd = HankelDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt, parametric=self.parametric)
+            self.dmd = HankelDMD(svd_rank = self.rank, delay=self.delay, parametric=self.parametric)
         elif self.method == 'highorder':
-            self.dmd = HighOrderDMD(svd_rank = self.rank, delay=self.delay, dt=self.dt, parametric=self.parametric)
+            self.dmd = HighOrderDMD(svd_rank = self.rank, delay=self.delay, parametric=self.parametric)
         elif self.method == 'bagopt':
-            self.dmd = BaggingOptimisedDMD(svd_rank= self.rank, delay=self.delay, num_trials=self.num_trials, eig_constraints=self.eig_constraints, dt = self.dt, parametric=self.parametric)
+            self.dmd = BaggingOptimisedDMD(svd_rank= self.rank, delay=self.delay, num_trials=self.num_trials, eig_constraints=self.eig_constraints, parametric=self.parametric)
         else:
             raise ValueError("Invalid DMD method specified in the config: {}".format(self.method))
 
@@ -94,7 +96,7 @@ class DMD4CTF:
         """
         Train the DMD model.
         """
-        self.dmd.train(self.train_data)
+        self.dmd.train(self.train_data, self.train_time)
         
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
@@ -103,11 +105,11 @@ class DMD4CTF:
         return self.dmd.predict(prediction_timesteps)
 
 class ClassicDMD():
-    def __init__(self, svd_rank: int, dt: float, parametric: Optional[dict] = None):
+    def __init__(self, svd_rank: int, parametric: Optional[dict] = None):
         """
         Initialize the DMD model.
         """
-        self.dt = dt
+        
         self.parametric = parametric
 
         if parametric is None:
@@ -123,13 +125,14 @@ class ClassicDMD():
 
             self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
-    def train(self, train_data: np.ndarray):
+    def train(self, train_data: np.ndarray, train_time: np.ndarray):
         """
         Train the DMD model.
         """
 
         warnings.filterwarnings("ignore")
         self.spatial_dimension = train_data.shape[1]
+        self.dt = train_time[1] - train_time[0] # Assuming uniform time steps
 
         if self.parametric is not None:
             assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
@@ -138,9 +141,9 @@ class ClassicDMD():
 
             self.dmd.fit(train_data[0])
         
-        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['t0'] = train_time[0]
         self.dmd.original_time['dt'] = self.dt
-        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        self.dmd.original_time['tend'] = train_time[-1]
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
@@ -171,11 +174,11 @@ class HankelDMD():
     """
     Initializes the DMD model with Hankel preprocessing.
     """
-    def __init__(self, svd_rank: int, delay: int, dt: float, parametric: Optional[dict] = None):
+    def __init__(self, svd_rank: int, delay: int, parametric: Optional[dict] = None):
         """
         
         """
-        self.dt = dt
+        
         self.parametric = parametric
         self.delay = delay
 
@@ -192,13 +195,14 @@ class HankelDMD():
 
             self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
-    def train(self, train_data: np.ndarray):
+    def train(self, train_data: np.ndarray, train_time: np.ndarray):
         """
         Train the DMD model.
         """
 
         warnings.filterwarnings("ignore")
         self.spatial_dimension = train_data.shape[1]
+        self.dt = train_time[1] - train_time[0] # Assuming uniform time steps
 
         if self.parametric is not None:
             assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
@@ -207,9 +211,9 @@ class HankelDMD():
 
             self.dmd.fit(train_data[0])
             
-        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['t0'] = train_time[0]
         self.dmd.original_time['dt'] = self.dt
-        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        self.dmd.original_time['tend'] = train_time[-1]
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
@@ -242,11 +246,10 @@ class HighOrderDMD():
     """
     
     """
-    def __init__(self, svd_rank: int, delay: int, dt: float, parametric: Optional[dict] = None):
+    def __init__(self, svd_rank: int, delay: int, parametric: Optional[dict] = None):
         """
         
         """
-        self.dt = dt
         self.parametric = parametric
 
         if parametric is None:    
@@ -262,13 +265,14 @@ class HighOrderDMD():
 
             self.dmd = ParametricDMD(self._dmd, self.pod, self.interpolator)
 
-    def train(self, train_data: np.ndarray):
+    def train(self, train_data: np.ndarray, train_time: np.ndarray):
         """
         Train the DMD model.
         """
 
         warnings.filterwarnings("ignore")
         self.spatial_dimension = train_data.shape[1]
+        self.dt = train_time[1] - train_time[0] # Assuming uniform time steps
 
         if self.parametric is not None:
             assert len(train_data) == len(self.parametric['train_params']), "Number of training data must match the number of training parameters"
@@ -276,9 +280,9 @@ class HighOrderDMD():
         else:
             self.dmd.fit(train_data[0])
             
-        self.dmd.original_time['t0'] = 0
+        self.dmd.original_time['t0'] = train_time[0]
         self.dmd.original_time['dt'] = self.dt
-        self.dmd.original_time['tend'] = (train_data.shape[2]) * self.dt
+        self.dmd.original_time['tend'] = train_time[-1]
 
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
@@ -308,14 +312,13 @@ class BaggingOptimisedDMD():
     """
     
     """
-    def __init__(self, svd_rank: int, dt: float, 
+    def __init__(self, svd_rank: int,
                  delay: Optional[int] = None, num_trials: Optional[int] = 0, eig_constraints: Optional[set] = None,
                  parametric: Optional[dict] = None):
         """
         
         """
 
-        self.dt = dt
         self.parametric = parametric
 
         if parametric is None:
@@ -330,12 +333,45 @@ class BaggingOptimisedDMD():
                 self.dmd = _dmd
                 self.delay = None
         else:
-            self.dmd = None # pydmd does not support parametric DMD with bagging optimised
+            
+            self.rom = POD(rank=svd_rank, method='randomized_svd')
+            self.interpolator = RBF()
 
+            # if delay is not None:
+            #     self._dmd = hankel_preprocessing(BOPDMD(svd_rank=-1,  num_trials=num_trials, eig_constraints=eig_constraints, varpro_opts_dict={'verbose': False}), 
+            #                                      d=delay) if parametric['mode'] == 'monolithic' else [hankel_preprocessing(BOPDMD(svd_rank=-1, num_trials=num_trials, eig_constraints=eig_constraints, varpro_opts_dict={'verbose': False}), d=delay) for _ in range(len(parametric['train_params']))]
+            #     self.delay = delay
+            # else:
+            #     self._dmd = BOPDMD(svd_rank=-1,  num_trials=num_trials, eig_constraints=eig_constraints, varpro_opts_dict={'verbose': False}) if parametric['mode'] == 'monolithic' else [BOPDMD(svd_rank=-1,  num_trials=num_trials, eig_constraints=eig_constraints, varpro_opts_dict={'verbose': False}) for _ in range(len(parametric['train_params']))]
+            #     self.delay = None
+            base_dmd = lambda: BOPDMD(
+                svd_rank=-1,
+                num_trials=num_trials,
+                eig_constraints=eig_constraints,
+                varpro_opts_dict={'verbose': False}
+            )
+
+            if parametric['mode'] == 'monolithic':
+                if delay is not None:
+                    self._dmd = hankel_preprocessing(base_dmd(), d=delay)
+                else:
+                    self._dmd = base_dmd()
+            else:
+                n_models = len(parametric['train_params'])
+                if delay is not None:
+                    self._dmd = [hankel_preprocessing(base_dmd(), d=delay) for _ in range(n_models)]
+                else:
+                    self._dmd = [base_dmd() for _ in range(n_models)]
+
+            self.delay = delay if delay is not None else None
+
+
+            self.dmd = ParametricDMD(self._dmd, self.rom, self.interpolator) # , dmd_fit_args={'t': parametric['train_time']})
+            
         self.num_trials = num_trials
         self.eig_constraints = eig_constraints
 
-    def train(self, train_data: np.ndarray):
+    def train(self, train_data: np.ndarray, train_time: np.ndarray):
         """
         Train the DMD model.
         """
@@ -343,14 +379,15 @@ class BaggingOptimisedDMD():
         warnings.filterwarnings("ignore")
         self.spatial_dimension = train_data.shape[1]
 
+        if self.delay is not None:
+            train_time = train_time[:-self.delay+1]
+
         if self.parametric is not None:
-            print("Warning: BOPDMD model not trained. Multiple Trajectories not supported")
+            dmd_fit_kwargs = {'t': train_time}
+            self.dmd._dmd_fit_kwargs = dmd_fit_kwargs
+
+            self.dmd.fit(train_data, self.parametric['train_params'])
         else:
-
-            train_time = np.arange(train_data.shape[2]) * self.dt
-
-            if self.delay is not None:
-                train_time = train_time[:-self.delay+1]
 
             self.dmd.fit(train_data[0], t=train_time)
 
@@ -358,9 +395,10 @@ class BaggingOptimisedDMD():
         """
         
         """
-        if self.dmd is None:
-            print("Warning: BOPDMD model not supported for parametric data -> predicting zeros")
-            pred_data = np.zeros((self.spatial_dimension, prediction_timesteps.shape[0]))
+        if self.parametric is not None:
+            self.dmd.parameters = self.parametric['test_params']
+            pred_data = self.forecast_parametric(prediction_timesteps)[0]
+
         else:
             pred_data = self.dmd.forecast(prediction_timesteps)
 
@@ -370,6 +408,41 @@ class BaggingOptimisedDMD():
             if self.delay is not None:
                 pred_data = pred_data[:self.spatial_dimension]
 
-            assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
+        assert pred_data.shape[0] == self.spatial_dimension, "Predicted data must have the same number of features as training data"
 
         return pred_data
+
+    def forecast_parametric(self, prediction_timesteps: np.ndarray) -> np.ndarray:
+        """
+
+        """
+        if self.dmd.is_partitioned:
+            forecasted_modal_coefficients = list()
+            for _dmd in self._dmd:
+                if self.num_trials > 0:
+                    forecasted_modal_coefficients.append(_dmd.forecast(prediction_timesteps)[0])
+                else:
+                    forecasted_modal_coefficients.append(_dmd.forecast(prediction_timesteps))
+            forecasted_modal_coefficients =  np.vstack(forecasted_modal_coefficients)
+        else:
+            forecasted_modal_coefficients = self._dmd.forecast(prediction_timesteps)
+
+            if self.num_trials > 0:
+                forecasted_modal_coefficients = forecasted_modal_coefficients[0]    
+        
+        if self.delay is not None:
+            _extracted_modal_idx = np.hstack([
+                np.arange(self.dmd._spatial_pod.rank) + self.delay*mu*self.dmd._spatial_pod.rank 
+                for mu in range(self.parametric['train_params'].shape[0])
+            ])
+            forecasted_modal_coefficients = forecasted_modal_coefficients[_extracted_modal_idx]
+
+        interpolated_modal_coefficients = (
+            self.dmd._interpolate_missing_modal_coefficients(
+                forecasted_modal_coefficients
+            )
+        )
+
+        return np.apply_along_axis(
+            self.dmd._spatial_pod.expand, 1, interpolated_modal_coefficients
+        )

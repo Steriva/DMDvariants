@@ -4,7 +4,7 @@ from pathlib import Path
 import datetime
 from typing import List, Dict, Any
 
-from ctf4science.data_module import load_dataset, parse_pair_ids, get_applicable_plots, get_prediction_timesteps
+from ctf4science.data_module import load_dataset, parse_pair_ids, get_applicable_plots, get_prediction_timesteps, get_training_timesteps
 from ctf4science.eval_module import evaluate, save_results
 from ctf4science.visualization_module import Visualization
 from models.DMDvariants.dmd import DMD4CTF
@@ -136,14 +136,14 @@ def main(config_path: str) -> None:
         # Load sub-dataset
         train_data, initialization_data = load_dataset(dataset_name, pair_id)
 
-        # Load metadata (to provide forecast length)
+        # Load metadata
+        train_timesteps = get_training_timesteps(dataset_name, pair_id)[0] # extract first element
         prediction_timesteps = get_prediction_timesteps(dataset_name, pair_id)
-        delta_t = prediction_timesteps[1] - prediction_timesteps[0]
 
         # Initialize the model with the config and train_data
         print(f"Running {model_name} on {dataset_name} pair {pair_id}")
 
-        dmd_model = DMD4CTF(config, pair_id, train_data, delta_t)
+        dmd_model = DMD4CTF(config, pair_id, train_data, train_timesteps, check_svd = False)
         dmd_model.initialize()
 
         # Train the DMD model
