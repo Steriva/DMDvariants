@@ -314,7 +314,7 @@ class BaggingOptimisedDMD():
     """
     def __init__(self, svd_rank: int,
                  delay: Optional[int] = None, num_trials: Optional[int] = 0, eig_constraints: Optional[set] = None,
-                 parametric: Optional[dict] = None):
+                 parametric: Optional[dict] = None, tol=0.475):
         """
         
         """
@@ -348,7 +348,7 @@ class BaggingOptimisedDMD():
                 svd_rank=-1,
                 num_trials=num_trials,
                 eig_constraints=eig_constraints,
-                varpro_opts_dict={'verbose': True}
+                varpro_opts_dict={'verbose': False, 'tol': tol}
             )
 
             if parametric['mode'] == 'monolithic':

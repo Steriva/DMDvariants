@@ -57,17 +57,7 @@ def main(config_path: str) -> None:
         prediction_timesteps = get_validation_prediction_timesteps(dataset_name, pair_id, train_split)
         train_timesteps = get_validation_training_timesteps(dataset_name, pair_id, train_split)[0]
 
-        # Load initialization matrix if it exists
-        if init_data is None:
-            # Stack all training matrices to get a single training matrix
-            train_data = np.concatenate(train_data, axis=1)
-        else:
-            # If we are given a burn-in matrix, use it as the training matrix
-            train_data = init_data
-
         # Initialize the model with the config and train_data
-        train_data = [train_data] # DMD4CTF expects a list of matrices
-        
         dmd_model = DMD4CTF(config, pair_id, train_data, train_timesteps, check_svd=False)
         dmd_model.initialize()
         dmd_model.train()
