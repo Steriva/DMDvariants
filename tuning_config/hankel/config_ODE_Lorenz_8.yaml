@@ -1,0 +1,23 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id:
+  - 8
+hyperparameters:
+  rank:
+    lower_bound: 3
+    type: randint
+    upper_bound: 10
+  delay:
+    type: choice
+    choices: [10, 25, 50]
+  parametric:
+    choices:
+    - monolithic
+    - partitioned
+    type: choice
+model:
+  method: hankel
+  n_trials: 5
+  name: DMD_hankel
+  seed: 0
+  train_split: 0.75

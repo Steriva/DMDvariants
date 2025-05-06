@@ -1,0 +1,23 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 9
+hyperparameters:
+  parametric:
+    choices:
+    - monolithic
+    - partitioned
+    type: choice
+  rank:
+    lower_bound: 20
+    type: randint
+    upper_bound: 80
+  delay:
+    type: choice
+    choices: [10, 20, 30]
+model:
+  method: hankel
+  n_trials: 5
+  name: DMD_hankel
+  seed: 0
+  train_split: 0.75

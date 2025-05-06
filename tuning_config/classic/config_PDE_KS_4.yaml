@@ -1,0 +1,15 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 4
+hyperparameters:
+  rank:
+    lower_bound: 10
+    type: randint
+    upper_bound: 50
+model:
+  method: classic
+  n_trials: 5
+  name: DMD_classic
+  seed: 0
+  train_split: 0.75
