@@ -1,5 +1,8 @@
-# config for HP tuning
-config/HPTuning
+# optimal config files
+config/classic
+config/highorder
+config/hankel
+config/bagopt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
