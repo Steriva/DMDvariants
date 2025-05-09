@@ -17,7 +17,7 @@ hyperparameters:
     type: choice
 model:
   method: highorder
-  n_trials: 5
+  n_trials: 10
   name: DMD_highorder
   seed: 0
   train_split: 0.75

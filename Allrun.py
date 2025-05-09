@@ -3,8 +3,8 @@ import yaml
 
 # method = 'classic'
 # method = 'hankel'
-method = 'highorder'
-# method = 'bagopt'
+# method = 'highorder'
+method = 'bagopt'
 
 
 for dataset in ['ODE_Lorenz', 'PDE_KS']:
@@ -14,6 +14,7 @@ for dataset in ['ODE_Lorenz', 'PDE_KS']:
 
     # Optimize hyper-parameters for each config file
     for file in files:
+        # os.system(f'python optimize_parameters.py --config_path tuning_config/{method}/{file}')
         os.system(f'python optimize_parameters.py --config_path tuning_config/{method}/{file}')
 
     tune_folders = sorted(os.listdir(f'../../results/tune_results/{dataset}/DMD_{method}/'))

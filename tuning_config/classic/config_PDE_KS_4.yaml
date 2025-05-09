@@ -9,7 +9,7 @@ hyperparameters:
     upper_bound: 50
 model:
   method: classic
-  n_trials: 5
+  n_trials: 10
   name: DMD_classic
   seed: 0
   train_split: 0.75

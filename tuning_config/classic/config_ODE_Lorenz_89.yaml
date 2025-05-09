@@ -8,7 +8,7 @@ model:
   train_split: 0.75   # float in (0.7 and 1.0)
                      # proportion of train data to use for training
   seed: 0
-  n_trials: 3
+  n_trials: 10
   method: classic
 hyperparameters: # Specify hyperparameters and ranges
   rank:

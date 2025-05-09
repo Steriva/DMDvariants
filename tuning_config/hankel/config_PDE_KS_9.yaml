@@ -17,7 +17,7 @@ hyperparameters:
     choices: [10, 20, 30]
 model:
   method: hankel
-  n_trials: 5
+  n_trials: 10
   name: DMD_hankel
   seed: 0
   train_split: 0.75
