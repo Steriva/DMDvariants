@@ -14,9 +14,9 @@ hyperparameters: # Specify hyperparameters and ranges
     type: randint
     lower_bound: 10
     upper_bound: 30
-  delay:
-    type: choice
-    choices: [3,5,8]
+  # delay:
+  #   type: choice
+  #   choices: [2,3,4]
   eig_constraints:
     type: choice
     choices: [['stable'], ['conjugate_pairs'], ['stable', 'conjugate_pairs']]

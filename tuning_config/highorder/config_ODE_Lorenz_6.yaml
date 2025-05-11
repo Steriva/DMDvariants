@@ -9,7 +9,7 @@ hyperparameters:
     upper_bound: 20
   delay:
     type: choice
-    choices: [10, 20, 30]
+    choices: [10, 20, 30, 40, 50]
 model:
   method: highorder
   n_trials: 10
