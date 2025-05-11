@@ -7,7 +7,8 @@ import yaml
 method = 'bagopt'
 
 
-for dataset in ['ODE_Lorenz', 'PDE_KS']:
+# for dataset in ['ODE_Lorenz', 'PDE_KS']:
+for dataset in ['PDE_KS']:
 
     files = os.listdir(f'tuning_config/{method}/')
     files = sorted([f for f in files if f.startswith(f"config_{dataset}_") and f.endswith(".yaml")])

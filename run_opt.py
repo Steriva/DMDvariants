@@ -53,19 +53,28 @@ def main(config_path: str) -> None:
     for pair_id in pair_ids:
         # Generate training and validation splits (and burn-in matrix when applicable) 
         train_split = config['model']['train_split']
-        train_data, val_data, init_data = load_validation_dataset(dataset_name, pair_id, train_split)
+        # Load sub-dataset - transpose is used since DMD requires data in (space, time) format
+        train_data, val_data, init_data = load_validation_dataset(dataset_name, pair_id, train_split, transpose=True)
         prediction_timesteps = get_validation_prediction_timesteps(dataset_name, pair_id, train_split)
         train_timesteps = get_validation_training_timesteps(dataset_name, pair_id, train_split)[0]
 
         # Initialize the model with the config and train_data
         dmd_model = DMD4CTF(config, pair_id, train_data, train_timesteps, check_svd=False)
         dmd_model.initialize()
-        dmd_model.train()
+
+        if dataset_name == 'PDE_KS':
+            compress_data = True
+        else:
+            compress_data = False
+        dmd_model.train(compress_data=compress_data)
 
         # Generate predictions
         pred_data = dmd_model.predict(prediction_timesteps)
+        pred_data = pred_data.T.real  # Transpose to (time, space) format
+        
 
         # Evaluate predictions using default metrics
+        val_data = val_data.T # Transpose to (time, space) format
         results = evaluate_custom(dataset_name, pair_id, val_data, pred_data)
 
         # Append metrics to batch results

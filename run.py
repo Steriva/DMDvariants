@@ -14,71 +14,71 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
 
-class PlotKS:
-    def __init__(self, aspect = 0.1, nx = 1024):
-        self.aspect = aspect
-        self.x = np.linspace(0, 32 * np.pi, nx)
+# class PlotKS:
+#     def __init__(self, aspect = 0.1, nx = 1024):
+#         self.aspect = aspect
+#         self.x = np.linspace(0, 32 * np.pi, nx)
 
-    def plot_contour(self, ax, snap, cmap = cm.jet, levels = 100, show_ticks = True):
-        t = np.arange(0, snap.shape[1])
-        xgrid, tgrid = np.meshgrid(self.x, t)
+#     def plot_contour(self, ax, snap, cmap = cm.jet, levels = 100, show_ticks = True):
+#         t = np.arange(0, snap.shape[1])
+#         xgrid, tgrid = np.meshgrid(self.x, t)
 
-        cont = ax.contourf(xgrid, tgrid, snap.T, levels=levels, cmap=cmap)
+#         cont = ax.contourf(xgrid, tgrid, snap.T, levels=levels, cmap=cmap)
 
-        if not show_ticks:
-            ax.set_xticks([])
-            ax.set_yticks([])
+#         if not show_ticks:
+#             ax.set_xticks([])
+#             ax.set_yticks([])
 
-        ax.set_aspect(self.aspect)
-        return cont
+#         ax.set_aspect(self.aspect)
+#         return cont
 
-    def compare_prediction(self, test_data, pred_data, figsize=(10,8), levels=100, cmap=cm.jet,
-                       cbar_options=None, show_ticks=True, show_titles=True):
+#     def compare_prediction(self, test_data, pred_data, figsize=(10,8), levels=100, cmap=cm.jet,
+#                        cbar_options=None, show_ticks=True, show_titles=True):
 
-        default_cbar_options = {
-            'show': True,
-            'orientation': 'horizontal',
-            'shrink': 0.8
-        }
+#         default_cbar_options = {
+#             'show': True,
+#             'orientation': 'horizontal',
+#             'shrink': 0.8
+#         }
 
-        # Safely merge with user input
-        if cbar_options is None:
-            cbar_options = default_cbar_options
-        else:
-            cbar_options = {**default_cbar_options, **cbar_options}
+#         # Safely merge with user input
+#         if cbar_options is None:
+#             cbar_options = default_cbar_options
+#         else:
+#             cbar_options = {**default_cbar_options, **cbar_options}
 
-        fig, axs = plt.subplots(1, 2, figsize=figsize)
+#         fig, axs = plt.subplots(1, 2, figsize=figsize)
 
-        if isinstance(levels, int):
-            levels = np.linspace(test_data.min(), test_data.max(), levels)
+#         if isinstance(levels, int):
+#             levels = np.linspace(test_data.min(), test_data.max(), levels)
 
-        cont_test = self.plot_contour(axs[0], test_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
-        self.plot_contour(axs[1], pred_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
+#         cont_test = self.plot_contour(axs[0], test_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
+#         self.plot_contour(axs[1], pred_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
 
-        if cbar_options.get('show', True):
-            cbar = fig.colorbar(
-                cont_test,
-                ax=axs,
-                orientation=cbar_options.get('orientation', 'horizontal'),
-                shrink=cbar_options.get('shrink', 0.8)
-            )
+#         if cbar_options.get('show', True):
+#             cbar = fig.colorbar(
+#                 cont_test,
+#                 ax=axs,
+#                 orientation=cbar_options.get('orientation', 'horizontal'),
+#                 shrink=cbar_options.get('shrink', 0.8)
+#             )
 
-            ticks = cbar_options.get('ticks')
-            if ticks is not None:
-                if isinstance(ticks, (np.ndarray, list)):
-                    cbar.set_ticks(ticks)
-                elif isinstance(ticks, int):
-                    cbar.set_ticks(np.linspace(test_data.min(), test_data.max(), ticks))
+#             ticks = cbar_options.get('ticks')
+#             if ticks is not None:
+#                 if isinstance(ticks, (np.ndarray, list)):
+#                     cbar.set_ticks(ticks)
+#                 elif isinstance(ticks, int):
+#                     cbar.set_ticks(np.linspace(test_data.min(), test_data.max(), ticks))
 
-            label = cbar_options.get('label')
-            if label:
-                cbar.set_label(label)
+#             label = cbar_options.get('label')
+#             if label:
+#                 cbar.set_label(label)
 
-        if show_titles:
-            axs[0].set_title('Test Data')
-            axs[1].set_title('Predicted Data')
+#         if show_titles:
+#             axs[0].set_title('Test Data')
+#             axs[1].set_title('Predicted Data')
 
-        return fig
+#         return fig
     
 def main(config_path: str) -> None:
     """ TO MODIFY
@@ -126,15 +126,15 @@ def main(config_path: str) -> None:
     # Get applicable visualizations for the dataset
     applicable_plots = get_applicable_plots(dataset_name)
 
-    # To be deleted in the future (embedded in visualization_module)
-    if dataset_name == 'PDE_KS':
-        plot_KS = PlotKS(aspect=0.1)
+    # # To be deleted in the future (embedded in visualization_module)
+    # if dataset_name == 'PDE_KS':
+    #     plot_KS = PlotKS(aspect=0.1)
 
     # Process each sub-dataset
     for pair_id in pair_ids:
 
-        # Load sub-dataset
-        train_data, initialization_data = load_dataset(dataset_name, pair_id)
+        # Load sub-dataset - transpose is used since DMD requires data in (space, time) format
+        train_data, initialization_data = load_dataset(dataset_name, pair_id, transpose=True)
 
         # Load metadata
         train_timesteps = get_training_timesteps(dataset_name, pair_id)[0] # extract first element
@@ -147,11 +147,16 @@ def main(config_path: str) -> None:
         dmd_model.initialize()
 
         # Train the DMD model
-        dmd_model.train()
+        if dataset_name == 'PDE_KS':
+            compress_data = True
+        else:
+            compress_data = False
+        dmd_model.train(compress_data=compress_data)
 
         # Generate predictions
         pred_data = dmd_model.predict(prediction_timesteps)
-    
+        pred_data = pred_data.T.real
+
         # Evaluate predictions using default metrics
         results = evaluate(dataset_name, pair_id, pred_data)
 
@@ -171,16 +176,16 @@ def main(config_path: str) -> None:
             viz.save_figure_results(fig, dataset_name, model_name, batch_id, pair_id, plot_type, results_directory)
 
         # Save the contours (to be later moved to visualization_module)
-        if dataset_name == 'PDE_KS':
-            plot_KS = PlotKS(aspect=0.1)
-            from ctf4science.data_module import _load_test_data
-            test_data = _load_test_data(dataset_name, pair_id)
+        # if dataset_name == 'PDE_KS':
+        #     plot_KS = PlotKS(aspect=0.1)
+        #     from ctf4science.data_module import _load_test_data
+        #     test_data = _load_test_data(dataset_name, pair_id)
 
-            fig = plot_KS.compare_prediction(test_data, pred_data.real,
-                                            cbar_options={'ticks': 5})
-            fig.savefig(results_directory / f"visualizations/contour.png", dpi=200)
-            print(f"Saved contour plot to {results_directory / f'visualizations/contour.png'}")
-            plt.close(fig)
+        #     fig = plot_KS.compare_prediction(test_data, pred_data.real,
+        #                                     cbar_options={'ticks': 5})
+        #     fig.savefig(results_directory / f"visualizations/contour.png", dpi=200)
+        #     print(f"Saved contour plot to {results_directory / f'visualizations/contour.png'}")
+        #     plt.close(fig)
         print(' ')
 
     # Save aggregated batch results

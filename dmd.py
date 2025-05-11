@@ -5,6 +5,7 @@ from ezyrb import POD, RBF
 from pydmd.preprocessing import hankel_preprocessing
 import warnings
 from ctf4science.data_module import get_config
+from sklearn.utils.extmath import randomized_svd
 
 class DMD4CTF:
     """
@@ -80,7 +81,8 @@ class DMD4CTF:
     
     """
 
-    def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray], train_time: np.ndarray, check_svd: Optional[bool] = True):
+    def __init__(self, config: Dict, pair_id: int, train_data: List[np.ndarray], train_time: np.ndarray, 
+                 check_svd: Optional[bool] = True):
         """
         Initialize the DMD4CTF class with configuration, data, and metadata.
 
@@ -188,11 +190,28 @@ class DMD4CTF:
         else:
             raise ValueError("Invalid DMD method specified in the config: {}".format(self.method))
 
-    def train(self):
+    def train(self, compress_data: Optional[bool] = False):
         """
         Train the initialized DMD model using the provided training data and time vector.
         """
-        self.dmd.train(self.train_data, self.train_time)
+        if compress_data:
+            warnings.filterwarnings("ignore")
+            if self.parametric is not None:
+                _data = np.transpose(self.train_data, (0, 2, 1)).reshape(-1, self.spatial_dimension).T
+                self.spatial_modes, self.sing_vals, reduced_coeff = randomized_svd(_data, n_components=self.rank, n_iter='auto')
+                reduced_coeff = reduced_coeff.T.reshape(self.train_data.shape[0], self.train_data.shape[2], self.rank)
+                training_data = reduced_coeff.transpose(0, 2, 1)
+                assert training_data.shape[1] == self.rank, "Training data must have the same number of features as the rank"
+            else:
+                self.spatial_modes, self.sing_vals, reduced_coeff = randomized_svd(self.train_data[0], n_components=self.rank, n_iter='auto')
+                training_data = np.array([reduced_coeff])
+                assert training_data.shape[1] == self.rank, "Training data must have the same number of features as the rank"
+        else:
+            training_data = self.train_data
+            self.spatial_modes = None
+            self.sing_vals = None
+
+        self.dmd.train(training_data, self.train_time)
         
     def predict(self, prediction_timesteps: np.ndarray) -> np.ndarray:
         """
@@ -209,7 +228,12 @@ class DMD4CTF:
             Predicted state matrix of shape (spatial_features, num_timesteps).
         
         """
-        return self.dmd.predict(prediction_timesteps)
+        pred_data = self.dmd.predict(prediction_timesteps)
+        if self.spatial_modes is not None:
+            pred_data = np.linalg.multi_dot([self.spatial_modes, np.diag(self.sing_vals), pred_data])
+
+        return pred_data.real
+        
 
 class ClassicDMD():
     """
