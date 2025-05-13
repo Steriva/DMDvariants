@@ -1,8 +1,8 @@
 # optimal config files
-config/classic
-config/highorder
-config/hankel
-config/bagopt
+# config/classic
+# config/highorder
+# config/hankel
+# config/bagopt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
