@@ -689,12 +689,15 @@ class BaggingOptimisedDMD():
                 self.dmd = _dmd
                 self.delay = None
         else:
+            delay = None
+            self.delay = None # To be later modified - update prediction step
+            # self.delay = delay if delay is not None else None
             
             self.rom = POD(rank=svd_rank, method='randomized_svd')
             self.interpolator = RBF()
 
             base_dmd = lambda: BOPDMD(
-                svd_rank=-1,
+                svd_rank=svd_rank,
                 num_trials=num_trials,
                 eig_constraints=eig_constraints,
                 varpro_opts_dict={'verbose': False, 'tol': tol}
@@ -711,9 +714,6 @@ class BaggingOptimisedDMD():
                     self._dmd = [hankel_preprocessing(base_dmd(), d=delay) for _ in range(n_models)]
                 else:
                     self._dmd = [base_dmd() for _ in range(n_models)]
-
-            self.delay = delay if delay is not None else None
-
 
             self.dmd = ParametricDMD(self._dmd, self.rom, self.interpolator) # , dmd_fit_args={'t': parametric['train_time']})
             
@@ -821,7 +821,7 @@ class BaggingOptimisedDMD():
                 for mu in range(self.parametric['train_params'].shape[0])
             ])
             forecasted_modal_coefficients = forecasted_modal_coefficients[_extracted_modal_idx]
-
+            
         interpolated_modal_coefficients = (
             self.dmd._interpolate_missing_modal_coefficients(
                 forecasted_modal_coefficients
