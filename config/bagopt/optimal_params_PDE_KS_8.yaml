@@ -1,0 +1,13 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 8
+model:
+  eig_constraints:
+  - conjugate_pairs
+  - stable
+  method: bagopt
+  name: DMD
+  rank: 60
+  seed: 0
+  parametric: monolithic

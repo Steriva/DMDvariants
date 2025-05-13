@@ -1,0 +1,12 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id:
+  - 2
+model:
+  delay: 50
+  eig_constraints:
+  - conjugate_pairs
+  method: bagopt
+  name: DMD
+  rank: 25
+  seed: 0

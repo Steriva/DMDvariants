@@ -1,0 +1,11 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id:
+  - 8
+model:
+  delay: 200
+  method: highorder
+  name: DMD
+  parametric: partitioned
+  rank: 50
+  seed: 0

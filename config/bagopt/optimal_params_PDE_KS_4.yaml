@@ -1,0 +1,12 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 4
+model:
+  delay: 60
+  eig_constraints:
+  - stable
+  method: bagopt
+  name: DMD
+  rank: 30
+  seed: 0

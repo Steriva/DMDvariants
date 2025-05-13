@@ -1,0 +1,10 @@
+dataset:
+  name: ODE_Lorenz
+  pair_id:
+  - 6
+model:
+  delay: 75
+  method: highorder
+  name: DMD
+  rank: 20
+  seed: 0

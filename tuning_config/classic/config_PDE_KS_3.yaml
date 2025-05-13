@@ -4,9 +4,9 @@ dataset:
   - 3
 hyperparameters:
   rank:
-    lower_bound: 20
+    lower_bound: 10
     type: randint
-    upper_bound: 60
+    upper_bound: 50
 model:
   method: classic
   n_trials: 10

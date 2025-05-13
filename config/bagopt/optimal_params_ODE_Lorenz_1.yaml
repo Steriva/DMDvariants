@@ -2,20 +2,11 @@ dataset:
   name: ODE_Lorenz
   pair_id:
   - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
-  - 8
-  - 9
 model:
-  delay: 10
+  delay: 50
   eig_constraints:
   - conjugate_pairs
   method: bagopt
   name: DMD
-  rank: 3
+  rank: 25
   seed: 0
-  parametric: monolithic # monolithic or partitioned

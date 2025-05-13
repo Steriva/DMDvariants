@@ -9,7 +9,7 @@ hyperparameters:
     upper_bound: 10
   delay:
     type: choice
-    choices: [10, 25, 50]
+    choices: [10, 25, 50, 75, 100]
   parametric:
     choices:
     - monolithic
@@ -17,7 +17,7 @@ hyperparameters:
     type: choice
 model:
   method: highorder
-  n_trials: 10
+  n_trials: 20
   name: DMD_highorder
   seed: 0
   train_split: 0.75

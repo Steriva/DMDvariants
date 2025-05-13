@@ -14,10 +14,10 @@ hyperparameters:
     upper_bound: 80
   delay:
     type: choice
-    choices: [10, 20, 30]
+    choices: [10, 20, 30, 40, 50]
 model:
   method: highorder
-  n_trials: 10
+  n_trials: 20
   name: DMD_highorder
   seed: 0
   train_split: 0.75

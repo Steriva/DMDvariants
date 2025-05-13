@@ -7,7 +7,7 @@ model:
   train_split: 0.75   # float in (0.7 and 1.0)
                      # proportion of train data to use for training
   seed: 0
-  n_trials: 10
+  n_trials: 20
   method: bagopt
 hyperparameters: # Specify hyperparameters and ranges
   rank:
@@ -16,7 +16,7 @@ hyperparameters: # Specify hyperparameters and ranges
     upper_bound: 10
   delay:
     type: choice
-    choices: [10, 15, 20]
+    choices: [10, 20, 30, 40, 50]
   eig_constraints:
     type: choice
     choices: [['stable'], ['conjugate_pairs'], ['stable', 'conjugate_pairs']]

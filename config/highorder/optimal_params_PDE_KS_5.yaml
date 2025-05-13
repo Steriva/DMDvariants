@@ -1,0 +1,10 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 5
+model:
+  delay: 100
+  method: highorder
+  name: DMD
+  rank: 20
+  seed: 0

@@ -1,0 +1,12 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 2
+model:
+  delay: 10
+  eig_constraints:
+  - conjugate_pairs
+  method: bagopt
+  name: DMD
+  rank: 50
+  seed: 0

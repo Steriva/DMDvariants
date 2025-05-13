@@ -1,0 +1,9 @@
+dataset:
+  name: PDE_KS
+  pair_id:
+  - 1
+model:
+  method: classic
+  name: DMD
+  rank: 16
+  seed: 0
