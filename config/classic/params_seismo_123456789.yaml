@@ -13,6 +13,6 @@ dataset:
 model:
   method: classic
   name: DMD
-  rank: 500
+  rank: 250
   seed: 0
   scaler: minmax
