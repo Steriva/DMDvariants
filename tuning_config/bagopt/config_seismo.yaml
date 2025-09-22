@@ -1,0 +1,22 @@
+dataset:
+  name: seismo
+  pair_id:
+  - 1
+model:
+  name: DMD_bagopt
+  train_split: 0.75   # float in (0.7 and 1.0)
+                     # proportion of train data to use for training
+  seed: 0
+  n_trials: 5
+  method: bagopt
+  scaler: minmax
+hyperparameters: # Specify hyperparameters and ranges
+  rank:
+    type: choice
+    choices: [50, 100, 125, 150, 175, 200]
+  delay:
+    type: choice
+    choices: [2,3,4]
+  eig_constraints:
+    type: choice
+    choices: [['stable'], ['stable', 'conjugate_pairs']]

@@ -62,19 +62,17 @@ def main(config_path: str) -> None:
         dmd_model = DMD4CTF(config, pair_id, train_data, train_timesteps, check_svd=False)
         dmd_model.initialize()
 
-        if dataset_name == 'PDE_KS':
-            compress_data = True
-        else:
+        if dataset_name == 'ODE_Lorenz' or dataset_name == 'Lorenz_Official':
             compress_data = False
+        else:
+            compress_data = True
         dmd_model.train(compress_data=compress_data)
 
         # Generate predictions
         pred_data = dmd_model.predict(prediction_timesteps)
-        pred_data = pred_data.T.real  # Transpose to (time, space) format
         
-
         # Evaluate predictions using default metrics
-        val_data = val_data.T # Transpose to (time, space) format
+        val_data = val_data.T  # Transpose back to (time, space) for evaluation
         results = evaluate_custom(dataset_name, pair_id, val_data, pred_data)
 
         # Append metrics to batch results

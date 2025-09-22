@@ -1,3 +1,4 @@
+from sklearn.discriminant_analysis import StandardScaler
 import numpy as np
 from typing import List, Optional, Dict
 from pydmd import DMD, HODMD, BOPDMD, ParametricDMD
@@ -6,6 +7,7 @@ from pydmd.preprocessing import hankel_preprocessing
 import warnings
 from ctf4science.data_module import get_config
 from sklearn.utils.extmath import randomized_svd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 class DMD4CTF:
     """
@@ -113,9 +115,7 @@ class DMD4CTF:
         assert self.train_data.shape[1] == self.spatial_dimension, "Training data has shape {} but expected shape is {}".format(self.train_data.shape[1], self.spatial_dimension)
         
         self.pair_id = pair_id
-        self.matrix_start_index = dataset_metadata['matrix_start_index'][f'X{pair_id}test.mat']
-        self.test_shape = dataset_metadata['matrix_shapes'][f'X{pair_id}test.mat']
-
+        
         self.rank = config['model']['rank']
         if check_svd:
             self._check_svd_residual_energy(self.rank)
@@ -124,6 +124,25 @@ class DMD4CTF:
         self.delay = config['model']['delay'] if 'delay' in config['model'] else None
         self.num_trials = config['model']['num_trials'] if 'num_trials' in config['model'] else 0
         self.eig_constraints = {*config['model']['eig_constraints']} if 'eig_constraints' in config['model'] else None
+
+        # Set scaler if given and
+        if 'scaler' in config['model']:
+            if config['model']['scaler'] == 'standard':
+                self.scaler = StandardScaler()
+            elif config['model']['scaler'] == 'minmax':
+                self.scaler = MinMaxScaler()
+            else:
+                raise ValueError("Invalid scaler type specified in config: {}".format(config['model']['scaler']))
+
+            Nparams, Nh, Nt = self.train_data.shape # (Nparams, spatial_features, timesteps)
+
+            _reshaped_train_data = self.train_data.transpose(0, 2, 1).reshape(-1, Nh)
+
+            scaled = self.scaler.fit_transform(_reshaped_train_data)
+            self.train_data = scaled.reshape(Nparams, Nt, Nh).transpose(0, 2, 1)  # → (Nparams, Nh, Nt)
+            
+        else:
+            self.scaler = None
 
         # Set the parametric options based on the pair_id and size of the training data
         if pair_id == 8:
@@ -232,7 +251,12 @@ class DMD4CTF:
         if self.spatial_modes is not None:
             pred_data = np.linalg.multi_dot([self.spatial_modes, np.diag(self.sing_vals), pred_data])
 
-        return pred_data.real
+        pred_data = pred_data.real.T # shape (num_timesteps, spatial_features)
+
+        if self.scaler is not None:
+            pred_data = self.scaler.inverse_transform(pred_data) # shape (num_timesteps, spatial_features)
+
+        return pred_data
         
 
 class ClassicDMD():
@@ -700,7 +724,7 @@ class BaggingOptimisedDMD():
                 svd_rank=svd_rank,
                 num_trials=num_trials,
                 eig_constraints=eig_constraints,
-                varpro_opts_dict={'verbose': False, 'tol': tol}
+                varpro_opts_dict={'verbose': True, 'tol': tol}
             )
 
             if parametric['mode'] == 'monolithic':
@@ -734,7 +758,7 @@ class BaggingOptimisedDMD():
 
         """
 
-        warnings.filterwarnings("ignore")
+        # warnings.filterwarnings("ignore")
         self.spatial_dimension = train_data.shape[1]
 
         if self.delay is not None:

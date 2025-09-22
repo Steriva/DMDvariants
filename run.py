@@ -13,82 +13,29 @@ import os
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
-
-# class PlotKS:
-#     def __init__(self, aspect = 0.1, nx = 1024):
-#         self.aspect = aspect
-#         self.x = np.linspace(0, 32 * np.pi, nx)
-
-#     def plot_contour(self, ax, snap, cmap = cm.jet, levels = 100, show_ticks = True):
-#         t = np.arange(0, snap.shape[1])
-#         xgrid, tgrid = np.meshgrid(self.x, t)
-
-#         cont = ax.contourf(xgrid, tgrid, snap.T, levels=levels, cmap=cmap)
-
-#         if not show_ticks:
-#             ax.set_xticks([])
-#             ax.set_yticks([])
-
-#         ax.set_aspect(self.aspect)
-#         return cont
-
-#     def compare_prediction(self, test_data, pred_data, figsize=(10,8), levels=100, cmap=cm.jet,
-#                        cbar_options=None, show_ticks=True, show_titles=True):
-
-#         default_cbar_options = {
-#             'show': True,
-#             'orientation': 'horizontal',
-#             'shrink': 0.8
-#         }
-
-#         # Safely merge with user input
-#         if cbar_options is None:
-#             cbar_options = default_cbar_options
-#         else:
-#             cbar_options = {**default_cbar_options, **cbar_options}
-
-#         fig, axs = plt.subplots(1, 2, figsize=figsize)
-
-#         if isinstance(levels, int):
-#             levels = np.linspace(test_data.min(), test_data.max(), levels)
-
-#         cont_test = self.plot_contour(axs[0], test_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
-#         self.plot_contour(axs[1], pred_data, cmap=cmap, levels=levels, show_ticks=show_ticks)
-
-#         if cbar_options.get('show', True):
-#             cbar = fig.colorbar(
-#                 cont_test,
-#                 ax=axs,
-#                 orientation=cbar_options.get('orientation', 'horizontal'),
-#                 shrink=cbar_options.get('shrink', 0.8)
-#             )
-
-#             ticks = cbar_options.get('ticks')
-#             if ticks is not None:
-#                 if isinstance(ticks, (np.ndarray, list)):
-#                     cbar.set_ticks(ticks)
-#                 elif isinstance(ticks, int):
-#                     cbar.set_ticks(np.linspace(test_data.min(), test_data.max(), ticks))
-
-#             label = cbar_options.get('label')
-#             if label:
-#                 cbar.set_label(label)
-
-#         if show_titles:
-#             axs[0].set_title('Test Data')
-#             axs[1].set_title('Predicted Data')
-
-#         return fig
     
 def main(config_path: str) -> None:
-    """ TO MODIFY
-    Main function to run the ... model on specified sub-datasets.
-
-    Loads configuration, parses pair_ids, initializes the model, generates predictions,
-    evaluates them, and saves results for each sub-dataset under a batch identifier.
+    """
+    Executes the main workflow for running a DMD-based model on specified sub-datasets.
+    
+    This function performs the following steps:
+        1. Loads the experiment configuration from a YAML file.
+        2. Parses the dataset and retrieves the list of sub-dataset pair IDs.
+        3. Initializes model and batch identifiers based on configuration parameters.
+        4. Iterates over each sub-dataset pair:
+            - Loads training and initialization data.
+            - Retrieves training and prediction timesteps.
+            - Initializes and trains the DMD model.
+            - Generates predictions for the specified timesteps.
+            - Evaluates predictions using default metrics.
+            - Saves results and evaluation metrics.
+            - Generates and saves applicable visualizations.
+        5. Aggregates and saves batch results for all processed sub-datasets.
 
     Args:
-        config_path (str): Path to the configuration file.
+        config_path (str): Path to the YAML configuration file specifying dataset, model, and experiment parameters.
+    Returns:
+        None
     """
     # Load configuration
     with open(config_path, 'r') as f:
@@ -126,10 +73,6 @@ def main(config_path: str) -> None:
     # Get applicable visualizations for the dataset
     applicable_plots = get_applicable_plots(dataset_name)
 
-    # # To be deleted in the future (embedded in visualization_module)
-    # if dataset_name == 'PDE_KS':
-    #     plot_KS = PlotKS(aspect=0.1)
-
     # Process each sub-dataset
     for pair_id in pair_ids:
 
@@ -147,15 +90,14 @@ def main(config_path: str) -> None:
         dmd_model.initialize()
 
         # Train the DMD model
-        if dataset_name == 'PDE_KS':
-            compress_data = True
-        else:
+        if dataset_name == 'ODE_Lorenz' or dataset_name == 'Lorenz_Official':
             compress_data = False
+        else:
+            compress_data = True
         dmd_model.train(compress_data=compress_data)
 
         # Generate predictions
         pred_data = dmd_model.predict(prediction_timesteps)
-        pred_data = pred_data.T.real
 
         # Evaluate predictions using default metrics
         results = evaluate(dataset_name, pair_id, pred_data)
@@ -175,18 +117,8 @@ def main(config_path: str) -> None:
             fig = viz.plot_from_batch(dataset_name, pair_id, results_directory, plot_type=plot_type)
             viz.save_figure_results(fig, dataset_name, model_name, batch_id, pair_id, plot_type, results_directory)
 
-        # Save the contours (to be later moved to visualization_module)
-        # if dataset_name == 'PDE_KS':
-        #     plot_KS = PlotKS(aspect=0.1)
-        #     from ctf4science.data_module import _load_test_data
-        #     test_data = _load_test_data(dataset_name, pair_id)
-
-        #     fig = plot_KS.compare_prediction(test_data, pred_data.real,
-        #                                     cbar_options={'ticks': 5})
-        #     fig.savefig(results_directory / f"visualizations/contour.png", dpi=200)
-        #     print(f"Saved contour plot to {results_directory / f'visualizations/contour.png'}")
-        #     plt.close(fig)
         print(' ')
+        print(results)
 
     # Save aggregated batch results
     with open(results_directory.parent / 'batch_results.yaml', 'w') as f:

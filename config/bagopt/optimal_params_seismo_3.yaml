@@ -1,0 +1,13 @@
+dataset:
+  name: seismo
+  pair_id:
+  - 3
+model:
+  delay: 2
+  eig_constraints:
+  - stable
+  method: bagopt
+  name: DMD
+  rank: 150
+  seed: 0
+  scaler: minmax
